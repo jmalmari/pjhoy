@@ -43,7 +43,7 @@ fn deduplicate_cookies(cookie_str: &str) -> String {
 
 use chrono::NaiveDate;
 use ics::{ICalendar, Event};
-use ics::properties::{Summary, DtEnd, DtStart};
+use ics::properties::{Summary, DtStart};
 
 const SERVICES_FILE: &str = "services.json";
 const SERVICES_FULL_FILE: &str = "services_full.json";
@@ -403,13 +403,7 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
 
     // For all-day events, we use date-only format (YYYY-MM-DD)
     // All-day events should have DTEND as the day after the event
-    let start_date_str = next_date.clone(); // YYYY-MM-DD format for all-day events
-    let end_date_str = {
-        let date = NaiveDate::parse_from_str(next_date, "%Y-%m-%d")
-            .context("Failed to parse date")?;
-        let next_day = date + chrono::Duration::days(1);
-        next_day.format("%Y-%m-%d").to_string()
-    };
+    let dstamp = NaiveDate::parse_from_str(next_date, "%Y-%m-%d").context("Failed to parse date")?;
 
     // Create a unique UID using ASTAsnro, ASTTyyppi, ASTPos, and ASTNextDate
     // Using underscores as separators to avoid ambiguity with dashes in ASTAsnro
@@ -422,16 +416,18 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
                      service.ASTPos,
                      next_date);
 
-    let mut event = Event::new(uid, ""); // Create event with empty start, we'll add it explicitly
+    let event_date_str = dstamp.format("%Y%m%d").to_string();
 
-    // Add the start date as an all-day event (date-only format)
-    event.push(DtStart::new(start_date_str));
+    let mut event = Event::new(uid, event_date_str.clone());
+
+    // // Add the start date as an all-day event (date-only format)
+    event.push(DtStart::new(event_date_str));
 
     // Add the summary/description using ASTNimi
     event.push(Summary::new(format!("Trash pickup: {}", service.ASTNimi)));
 
-    // Add the end date as an all-day event (date-only format, next day)
-    event.push(DtEnd::new(end_date_str));
+    // // Add the end date as an all-day event (date-only format, next day)
+    // event.push(DtEnd::new(end_date_str));
 
     Ok(event)
 }
