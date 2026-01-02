@@ -44,6 +44,7 @@ fn deduplicate_cookies(cookie_str: &str) -> String {
 use chrono::NaiveDate;
 use ics::{ICalendar, Event};
 use ics::properties::{Summary, DtStart};
+use chrono::Utc;
 
 const SERVICES_FILE: &str = "services.json";
 const SERVICES_FULL_FILE: &str = "services_full.json";
@@ -418,7 +419,10 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
 
     let event_date_str = dstamp.format("%Y%m%d").to_string();
 
-    let mut event = Event::new(uid, event_date_str.clone());
+    let mut event = Event::new(uid, Utc::now().format("%Y%m%dT%H%M%SZ").to_string());
+
+    // Alternatively, the creation date could be done using
+    // ASTLastModDate and ASTLastModTime.
 
     // // Add the start date as an all-day event (date-only format)
     event.push(DtStart::new(event_date_str));
