@@ -112,6 +112,73 @@ mod tests {
         // Verify that JSESSIONIDVERSION appears only once
         assert_eq!(seen_cookies.len(), 2);
     }
+
+    #[test]
+    fn test_event_creation_with_timestamp() -> Result<()> {
+        // Create a sample trash service
+        let service = TrashService {
+            ASTNextDate: Some("2023-12-25".to_string()),
+            ASTNimi: "Test Trash Pickup".to_string(),
+            ASTAsnro: "12345".to_string(),
+            ASTPos: 1,
+            ASTTyyppi: Some(1),
+        };
+
+        // Generate the event
+        let event = generate_calendar_event(&service)?;
+
+        // Convert event to string
+        let event_str = event.to_string();
+        println!("Generated event:\n{}", event_str);
+
+        // Parse the event into a dictionary-like structure (HashMap)
+        // This allows us to test individual properties more easily
+        use std::collections::HashMap;
+
+        let mut properties = HashMap::new();
+
+        // Parse each line of the event (skip BEGIN/END lines and empty lines)
+        for line in event_str.lines() {
+            let line = line.trim();
+            if line.starts_with("BEGIN:") || line.starts_with("END:") || line.is_empty() {
+                continue;
+            }
+
+            // Split each line into NAME:VALUE pairs
+            if let Some((name, value)) = line.split_once(':') {
+                // For properties that can appear multiple times (like DTSTAMP),
+                // we'll store them as a vector
+                properties.entry(name.to_string())
+                    .or_insert_with(Vec::new)
+                    .push(value.to_string());
+            }
+        }
+
+        // Now we can test individual properties more precisely
+
+        // Test UID
+        assert_eq!(properties.get("UID"), Some(&vec!["pjhoy_12345_1_1_2023-12-25".to_string()]));
+
+        // Test DTSTART (should remain unchanged)
+        assert_eq!(properties.get("DTSTART"), Some(&vec!["20231225".to_string()]));
+
+        // Test SUMMARY
+        assert_eq!(properties.get("SUMMARY"), Some(&vec!["Trash pickup: Test Trash Pickup".to_string()]));
+
+        // Test DTSTAMP - should have at least one entry with current timestamp
+        if let Some(dtstamps) = properties.get("DTSTAMP") {
+            assert!(!dtstamps.is_empty(), "DTSTAMP should have at least one entry");
+
+            // At least one DTSTAMP should contain the 'T' character (indicating it has time component)
+            assert!(dtstamps.iter().all(|s| s.contains('T')), "DTSTAMP must have time component");
+
+            println!("DTSTAMP values found: {:?}", dtstamps);
+        } else {
+            panic!("DTSTAMP property not found in event");
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Parser, Debug)]
