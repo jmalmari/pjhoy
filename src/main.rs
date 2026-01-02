@@ -495,7 +495,7 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
     event.push(DtStart::new(event_date_str));
 
     // Add the summary/description using ASTNimi
-    event.push(Summary::new(format!("Trash pickup: {}", service.ASTNimi)));
+    event.push(Summary::new(format!("Jäte: {}", service.ASTNimi)));
 
     Ok(event)
 }
