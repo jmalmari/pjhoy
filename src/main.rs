@@ -430,9 +430,6 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
     // Add the summary/description using ASTNimi
     event.push(Summary::new(format!("Trash pickup: {}", service.ASTNimi)));
 
-    // // Add the end date as an all-day event (date-only format, next day)
-    // event.push(DtEnd::new(end_date_str));
-
     Ok(event)
 }
 
