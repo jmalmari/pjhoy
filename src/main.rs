@@ -10,6 +10,18 @@ use std::fs;
 use std::sync::Arc;
 use std::collections::HashSet;
 
+/// Product groups mapping with Finnish names and icons
+const PRODUCT_GROUPS: &[(&str, &str, &str)] = &[
+    ("SEK", "Sekajäte", "🗑️"),
+    ("BIO", "Biojäte", "🍃"),
+    ("KK", "Kartonki", "📦"),
+    ("MU", "Muovi", "🔄"),
+    ("PP", "Paperi", "📄"),
+    ("ME", "Metalli", "🔧"),
+    ("LA", "Lasi", "🥃"),
+    ("VU", "Vaarallinen jäte", "☣️"),
+];
+
 /// Deduplicates cookies by removing duplicate cookie names (keeping the first occurrence)
 ///
 /// # Arguments
@@ -122,6 +134,7 @@ mod tests {
             ASTAsnro: "12345".to_string(),
             ASTPos: 1,
             ASTTyyppi: Some(1),
+            tariff: None,
         };
 
         // Generate the event
@@ -163,7 +176,7 @@ mod tests {
         assert_eq!(properties.get("DTSTART"), Some(&vec!["20231225".to_string()]));
 
         // Test SUMMARY
-        assert_eq!(properties.get("SUMMARY"), Some(&vec!["Trash pickup: Test Trash Pickup".to_string()]));
+        assert_eq!(properties.get("SUMMARY"), Some(&vec!["Jäte: Test Trash Pickup".to_string()]));
 
         // Test DTSTAMP - should have at least one entry with current timestamp
         if let Some(dtstamps) = properties.get("DTSTAMP") {
@@ -176,6 +189,96 @@ mod tests {
         } else {
             panic!("DTSTAMP property not found in event");
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_product_group_titles() -> Result<()> {
+        // Test with SEK product group
+        let sek_service = TrashService {
+            ASTNextDate: Some("2023-12-25".to_string()),
+            ASTNimi: "Sekajäte säiliö".to_string(),
+            ASTAsnro: "12345".to_string(),
+            ASTPos: 1,
+            ASTTyyppi: Some(1),
+            tariff: Some(Tariff {
+                productgroup: Some("SEK".to_string()),
+                name: Some("Sekajäte".to_string()),
+            }),
+        };
+
+        let event = generate_calendar_event(&sek_service)?;
+        let event_str = event.to_string();
+        
+        // Verify the summary contains the product group title
+        assert!(event_str.contains("SUMMARY:🗑️ Sekajäte"));
+        
+        // Verify the description contains the original service name
+        assert!(event_str.contains("DESCRIPTION:Sekajäte säiliö"));
+
+        // Test with BIO product group
+        let bio_service = TrashService {
+            ASTNextDate: Some("2023-12-25".to_string()),
+            ASTNimi: "Biojäte säiliö".to_string(),
+            ASTAsnro: "12345".to_string(),
+            ASTPos: 2,
+            ASTTyyppi: Some(2),
+            tariff: Some(Tariff {
+                productgroup: Some("BIO".to_string()),
+                name: Some("Biojäte".to_string()),
+            }),
+        };
+
+        let event = generate_calendar_event(&bio_service)?;
+        let event_str = event.to_string();
+        
+        // Verify the summary contains the product group title
+        assert!(event_str.contains("SUMMARY:🍃 Biojäte"));
+        
+        // Verify the description contains the original service name
+        assert!(event_str.contains("DESCRIPTION:Biojäte säiliö"));
+
+        // Test with unknown product group
+        let unknown_service = TrashService {
+            ASTNextDate: Some("2023-12-25".to_string()),
+            ASTNimi: "Unknown service".to_string(),
+            ASTAsnro: "12345".to_string(),
+            ASTPos: 3,
+            ASTTyyppi: Some(3),
+            tariff: Some(Tariff {
+                productgroup: Some("UNKNOWN".to_string()),
+                name: Some("Unknown".to_string()),
+            }),
+        };
+
+        let event = generate_calendar_event(&unknown_service)?;
+        let event_str = event.to_string();
+        
+        // Verify the summary contains the unknown product group with default icon
+        assert!(event_str.contains("SUMMARY:📦 UNKNOWN"));
+        
+        // Verify the description contains the original service name
+        assert!(event_str.contains("DESCRIPTION:Unknown service"));
+
+        // Test with no tariff (fallback to old format)
+        let no_tariff_service = TrashService {
+            ASTNextDate: Some("2023-12-25".to_string()),
+            ASTNimi: "No tariff service".to_string(),
+            ASTAsnro: "12345".to_string(),
+            ASTPos: 4,
+            ASTTyyppi: Some(4),
+            tariff: None,
+        };
+
+        let event = generate_calendar_event(&no_tariff_service)?;
+        let event_str = event.to_string();
+        
+        // Verify the summary falls back to old format
+        assert!(event_str.contains("SUMMARY:Jäte: No tariff service"));
+        
+        // Verify the description contains the original service name
+        assert!(event_str.contains("DESCRIPTION:No tariff service"));
 
         Ok(())
     }
@@ -223,7 +326,16 @@ struct TrashService {
     ASTAsnro: String,             // Customer number for uniqueness
     ASTPos: i32,                  // Position for uniqueness
     ASTTyyppi: Option<i32>,       // Service type ID
+    tariff: Option<Tariff>,       // Tariff information including productgroup
     // Other fields from the JSON response
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+struct Tariff {
+    productgroup: Option<String>, // Product group identifier
+    name: Option<String>,        // Tariff name
+    // Other tariff fields
 }
 
 #[derive(Debug)]
@@ -488,16 +600,42 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
 
     let mut event = Event::new(uid, Utc::now().format("%Y%m%dT%H%M%SZ").to_string());
 
-    // Alternatively, the creation date could be done using
-    // ASTLastModDate and ASTLastModTime.
-
-    // // Add the start date as an all-day event (date-only format)
+    // Add the start date as an all-day event (date-only format)
     event.push(DtStart::new(event_date_str));
 
-    // Add the summary/description using ASTNimi
-    event.push(Summary::new(format!("Jäte: {}", service.ASTNimi)));
+    // Get product group information for the title
+    let product_group_title = get_product_group_title(service);
+    
+    // Add the summary using product group name
+    if let Some(title) = product_group_title {
+        event.push(Summary::new(title));
+    } else {
+        // Fallback to old format if no product group found
+        event.push(Summary::new(format!("Jäte: {}", service.ASTNimi)));
+    }
+
+    // Add the original service name as description
+    use ics::properties::Description;
+    event.push(Description::new(service.ASTNimi.clone()));
 
     Ok(event)
+}
+
+/// Get the product group title from the service's tariff information
+fn get_product_group_title(service: &TrashService) -> Option<String> {
+    // Try to get product group from tariff
+    let product_group = service.tariff.as_ref()
+        .and_then(|tariff| tariff.productgroup.as_ref())?;
+
+    // Find the corresponding Finnish name and icon
+    for (code, finnish_name, icon) in PRODUCT_GROUPS {
+        if code == &product_group {
+            return Some(format!("{} {}", icon, finnish_name));
+        }
+    }
+
+    // If product group not found in our mapping, return just the code
+    Some(format!("📦 {}", product_group))
 }
 
 /// Load trash schedule from trash_schedule.json file in current directory
