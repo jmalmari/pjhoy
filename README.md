@@ -38,10 +38,6 @@ The fetched JSON contains next pickup times, among other information about trash
 
 A calendar file (.ics) is maintained with latest pickup dates.
 
-### Systemd Integration
-
-Designed to work with systemd timers for regular updates.
-
 ## Installation
 
 1. Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
