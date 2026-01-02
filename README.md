@@ -36,7 +36,18 @@ The fetched JSON contains next pickup times, among other information about trash
 
 ### ICS Calendar Generation
 
-A calendar file (.ics) is maintained with latest pickup dates.
+A calendar file (.ics) is maintained with latest pickup dates. The calendar uses product groups as event titles with appropriate emoji icons:
+
+- 🗑️ Sekajäte (SEK)
+- 🍃 Biojäte (BIO)
+- 📦 Kartonki (KK)
+- 🔄 Muovi (MU)
+- 📄 Paperi (PP)
+- 🔧 Metalli (ME)
+- 🥃 Lasi (LA)
+- ☣️ Vaarallinen jäte (VU)
+
+The original service names are moved to event descriptions for additional context.
 
 ## Installation
 
