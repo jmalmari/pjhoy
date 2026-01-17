@@ -5,18 +5,22 @@ mod calendar;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 use crate::models::TrashService;
 use crate::client::PjhoyClient;
 use crate::config::load_config;
 
 const SERVICES_FILE: &str = "services.json";
 const SERVICES_FULL_FILE: &str = "services_full.json";
-const ICS_FILE: &str = "pjhoy.ics";
 
 #[derive(Parser, Debug)]
 #[command(name = "pjhoy")]
 #[command(about = "Pirkanmaan Jätehuolto Oy utility", long_about = None)]
 struct Cli {
+    /// Output ICS calendar file path
+    #[arg(long, short, default_value = "pjhoy.ics")]
+    output: PathBuf,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -32,7 +36,7 @@ enum Commands {
         save_parsed: bool,
 
         /// Save original raw JSON response to current directory
-        #[arg(long = "save-original-json", short = 'o')]
+        #[arg(long = "save-original-json", short = 'r')]
         save_original: bool,
     },
     /// Generate ICS calendar from current data
@@ -109,9 +113,9 @@ async fn main() -> Result<()> {
 
             // Save calendar file
             let calendar_content = calendar.to_string();
-            std::fs::write(ICS_FILE, calendar_content)
+            std::fs::write(&cli.output, calendar_content)
                 .context("Failed to write calendar file")?;
-            println!("Calendar saved to: {}", ICS_FILE);
+            println!("Calendar saved to: {:?}", cli.output);
 
             // Save parsed JSON if requested
             if save_parsed {
@@ -132,10 +136,10 @@ async fn main() -> Result<()> {
 
             // Save calendar
             let calendar_content = calendar.to_string();
-            std::fs::write(ICS_FILE, calendar_content)
+            std::fs::write(&cli.output, calendar_content)
                 .context("Failed to write calendar file")?;
 
-            println!("Calendar saved to: {}", ICS_FILE);
+            println!("Calendar saved to: {:?}", cli.output);
         }
     }
 
