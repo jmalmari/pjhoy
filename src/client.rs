@@ -92,11 +92,6 @@ impl PjhoyClient {
         Ok(())
     }
 
-    pub fn has_cookies(&self) -> bool {
-        let cookies = self.cookie_jar.cookies(&"https://extranet.pjhoy.fi/pirkka".parse().unwrap());
-        cookies.is_some() && !cookies.unwrap().is_empty()
-    }
-
     pub async fn login(&mut self) -> Result<()> {
         let login_url = "https://extranet.pjhoy.fi/pirkka/j_acegi_security_check?target=2";
         let base_url = "https://extranet.pjhoy.fi/pirkka";
