@@ -7,16 +7,21 @@ A command line tool for accessing trash pickup schedules from Pirkanmaan Jätehu
 ### Login and Session Management
 
 Command `pjhoy login` gets username and password from user
-configuration (usually `~/.config/pjhoy/config.toml`) and does cookie
-saving HTTP Form POST to
+configuration (usually `~/.config/pjhoy/config.toml`) and creates a
+new session with following:
 
-    https://extranet.pjhoy.fi/pirkka/j_acegi_security_check?target=2
+1. HTTP Get to https://extranet.pjhoy.fi/pirkka
 
-Form data, with example credentials, is
+   This can be done with empty cookies. The purpose is to retrieve
+   session id and store it in cookies for future authentication.
 
-- `j_username=<customer number>`
-- `j_password=<password>`
-- `remember-me=false`
+2. HTTP Form POST to https://extranet.pjhoy.fi/pirkka/j_acegi_security_check?target=2
+
+   With existing session in cookies, authentication attempt is made. Example form data:
+
+   - `j_username=<customer number>`
+   - `j_password=<password>`
+   - `remember-me=false`
 
 Cookies received are persisted. All other API calls use these session
 cookies to gain authorized access.
