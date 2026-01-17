@@ -89,9 +89,11 @@ async fn main() -> Result<()> {
     let config_dir = proj_dirs.config_dir().to_path_buf();
     std::fs::create_dir_all(&config_dir).context("Could not create config directory")?;
 
-    let config = load_config(&config_dir)?;
-    let mut client = PjhoyClient::new(config, config_dir)?;
+    let data_dir = proj_dirs.data_dir().to_path_buf();
+    std::fs::create_dir_all(&data_dir).context("Could not create data directory")?;
 
+    let config = load_config(&config_dir)?;
+    let mut client = PjhoyClient::new(config, data_dir)?;
     match cli.command {
         Commands::Login => {
             client.login().await?;

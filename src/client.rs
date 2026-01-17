@@ -31,12 +31,12 @@ pub struct PjhoyClient {
     pub config: Credentials,
     pub client: Client,
     pub cookie_jar: Arc<Jar>,
-    pub config_dir: PathBuf,
+    pub data_dir: PathBuf,
 }
 
 impl PjhoyClient {
-    pub fn new(config: Credentials, config_dir: PathBuf) -> Result<Self> {
-        let cookie_jar = std::sync::Arc::new(Self::load_cookies(&config_dir)?);
+    pub fn new(config: Credentials, data_dir: PathBuf) -> Result<Self> {
+        let cookie_jar = std::sync::Arc::new(Self::load_cookies(&data_dir)?);
 
         let client = Client::builder()
             .cookie_provider(cookie_jar.clone())
@@ -46,12 +46,12 @@ impl PjhoyClient {
             config,
             client,
             cookie_jar,
-            config_dir,
+            data_dir,
         })
     }
 
-    fn load_cookies(config_dir: &PathBuf) -> Result<Jar> {
-        let cookie_path = config_dir.join("cookies.txt");
+    fn load_cookies(data_dir: &PathBuf) -> Result<Jar> {
+        let cookie_path = data_dir.join("cookies.txt");
 
         if cookie_path.exists() {
             let cookie_data = fs::read_to_string(&cookie_path)
@@ -77,7 +77,7 @@ impl PjhoyClient {
     }
 
     pub fn save_cookies(&self) -> Result<()> {
-        let cookie_path = self.config_dir.join("cookies.txt");
+        let cookie_path = self.data_dir.join("cookies.txt");
         let url = "https://extranet.pjhoy.fi/pirkka".parse().unwrap();
         let cookies = self.cookie_jar.cookies(&url);
 
