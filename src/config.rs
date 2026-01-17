@@ -23,6 +23,5 @@ pub fn load_config(config_dir: &PathBuf) -> Result<Credentials> {
 }
 
 pub fn get_project_dirs() -> Result<ProjectDirs> {
-    ProjectDirs::from("fi", "pjhoy", "pjhoy")
-        .context("Could not determine project directories")
+    ProjectDirs::from("fi", "pjhoy", "pjhoy").context("Could not determine project directories")
 }

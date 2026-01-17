@@ -1,8 +1,8 @@
+use crate::models::TrashService;
 use anyhow::{Context, Result};
 use chrono::{NaiveDate, Utc};
-use ics::{ICalendar, Event};
-use ics::properties::{Summary, DtStart, Description};
-use crate::models::TrashService;
+use ics::properties::{Description, DtStart, Summary};
+use ics::{Event, ICalendar};
 
 /// Product groups mapping with Finnish names and icons
 const PRODUCT_GROUPS: &[(&str, &str, &str)] = &[
@@ -33,14 +33,14 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
         return Err(anyhow::anyhow!("Service has no next pickup date"));
     };
 
-    let dstamp = NaiveDate::parse_from_str(next_date, "%Y-%m-%d").context("Failed to parse date")?;
+    let dstamp =
+        NaiveDate::parse_from_str(next_date, "%Y-%m-%d").context("Failed to parse date")?;
     let service_type_id = service.ASTTyyppi.unwrap_or(0);
 
-    let uid = format!("pjhoy_{}_{}_{}_{}",
-                     service.ASTAsnro,
-                     service_type_id,
-                     service.ASTPos,
-                     next_date);
+    let uid = format!(
+        "pjhoy_{}_{}_{}_{}",
+        service.ASTAsnro, service_type_id, service.ASTPos, next_date
+    );
 
     let event_date_str = dstamp.format("%Y%m%d").to_string();
     let mut event = Event::new(uid, Utc::now().format("%Y%m%dT%H%M%SZ").to_string());
@@ -61,7 +61,9 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
 }
 
 fn get_product_group_title(service: &TrashService) -> Option<String> {
-    let product_group = service.tariff.as_ref()
+    let product_group = service
+        .tariff
+        .as_ref()
         .and_then(|tariff| tariff.productgroup.as_ref())?;
 
     for (code, finnish_name, icon) in PRODUCT_GROUPS {
@@ -75,7 +77,7 @@ fn get_product_group_title(service: &TrashService) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{TrashService, Tariff};
+    use crate::models::{Tariff, TrashService};
 
     #[test]
     fn test_event_creation_with_timestamp() -> Result<()> {
@@ -103,19 +105,35 @@ mod tests {
                 continue;
             }
             if let Some((name, value)) = line.split_once(':') {
-                properties.entry(name.to_string())
+                properties
+                    .entry(name.to_string())
                     .or_insert_with(Vec::new)
                     .push(value.to_string());
             }
         }
 
-        assert_eq!(properties.get("UID"), Some(&vec!["pjhoy_12345_1_1_2023-12-25".to_string()]));
-        assert_eq!(properties.get("DTSTART"), Some(&vec!["20231225".to_string()]));
-        assert_eq!(properties.get("SUMMARY"), Some(&vec!["Jäte: Test Trash Pickup".to_string()]));
+        assert_eq!(
+            properties.get("UID"),
+            Some(&vec!["pjhoy_12345_1_1_2023-12-25".to_string()])
+        );
+        assert_eq!(
+            properties.get("DTSTART"),
+            Some(&vec!["20231225".to_string()])
+        );
+        assert_eq!(
+            properties.get("SUMMARY"),
+            Some(&vec!["Jäte: Test Trash Pickup".to_string()])
+        );
 
         if let Some(dtstamps) = properties.get("DTSTAMP") {
-            assert!(!dtstamps.is_empty(), "DTSTAMP should have at least one entry");
-            assert!(dtstamps.iter().all(|s| s.contains('T')), "DTSTAMP must have time component");
+            assert!(
+                !dtstamps.is_empty(),
+                "DTSTAMP should have at least one entry"
+            );
+            assert!(
+                dtstamps.iter().all(|s| s.contains('T')),
+                "DTSTAMP must have time component"
+            );
         } else {
             panic!("DTSTAMP property not found in event");
         }

@@ -1,14 +1,14 @@
-mod models;
-mod config;
-mod client;
 mod calendar;
+mod client;
+mod config;
+mod models;
 
+use crate::client::PjhoyClient;
+use crate::config::load_config;
+use crate::models::TrashService;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};
-use crate::models::TrashService;
-use crate::client::PjhoyClient;
-use crate::config::load_config;
 
 const SERVICES_FILE: &str = "services.json";
 const SERVICES_FULL_FILE: &str = "services_full.json";
@@ -47,14 +47,17 @@ enum Commands {
 fn load_trash_services(data_dir: &Path) -> Result<Vec<TrashService>> {
     let file_path = data_dir.join(SERVICES_FILE);
     if !file_path.exists() {
-        return Err(anyhow::anyhow!("{} not found in data directory", SERVICES_FILE));
+        return Err(anyhow::anyhow!(
+            "{} not found in data directory",
+            SERVICES_FILE
+        ));
     }
 
-    let schedule_data = std::fs::read_to_string(&file_path)
-        .context(format!("Failed to read {:?}", file_path))?;
+    let schedule_data =
+        std::fs::read_to_string(&file_path).context(format!("Failed to read {:?}", file_path))?;
 
-    let services: Vec<TrashService> = serde_json::from_str(&schedule_data)
-        .context(format!("Failed to parse {:?}", file_path))?;
+    let services: Vec<TrashService> =
+        serde_json::from_str(&schedule_data).context(format!("Failed to parse {:?}", file_path))?;
 
     Ok(services)
 }
@@ -74,10 +77,14 @@ async fn save_parsed_json(services: &[TrashService], data_dir: &Path) -> Result<
 }
 
 /// Save the raw JSON response to a file in the data directory
-async fn save_raw_json(raw_json: &serde_json::Value, filename: &str, data_dir: &Path) -> Result<()> {
+async fn save_raw_json(
+    raw_json: &serde_json::Value,
+    filename: &str,
+    data_dir: &Path,
+) -> Result<()> {
     let file_path = data_dir.join(filename);
-    let json_string = serde_json::to_string_pretty(raw_json)
-        .context("Failed to serialize raw JSON to string")?;
+    let json_string =
+        serde_json::to_string_pretty(raw_json).context("Failed to serialize raw JSON to string")?;
 
     std::fs::write(&file_path, json_string)
         .context(format!("Failed to write JSON to {:?}", file_path))?;
@@ -90,16 +97,16 @@ async fn save_raw_json(raw_json: &serde_json::Value, filename: &str, data_dir: &
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    
+
     // Setup state
     let proj_dirs = config::get_project_dirs()?;
-    
+
     let config_dir = proj_dirs.config_dir().to_path_buf();
     std::fs::create_dir_all(&config_dir).context("Could not create config directory")?;
-    
+
     let data_dir = proj_dirs.data_dir().to_path_buf();
     std::fs::create_dir_all(&data_dir).context("Could not create data directory")?;
-    
+
     let config = load_config(&config_dir)?;
     let mut client = PjhoyClient::new(config, data_dir.clone())?;
 
@@ -111,7 +118,10 @@ async fn main() -> Result<()> {
             client.login().await?;
             println!("Login successful and cookies saved.");
         }
-        Commands::Fetch { save_parsed, save_original } => {
+        Commands::Fetch {
+            save_parsed,
+            save_original,
+        } => {
             let services_json = client.fetch_trash_services().await?;
             let services: Vec<TrashService> = serde_json::from_value(services_json.clone())?;
 

@@ -1,11 +1,11 @@
-use anyhow::{Context, Result};
-use reqwest::{Client, cookie::Jar};
-use reqwest::cookie::CookieStore;
-use std::path::PathBuf;
-use std::fs;
-use std::sync::Arc;
-use std::collections::HashSet;
 use crate::config::Credentials;
+use anyhow::{Context, Result};
+use reqwest::cookie::CookieStore;
+use reqwest::{cookie::Jar, Client};
+use std::collections::HashSet;
+use std::fs;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 /// Deduplicates cookies by removing duplicate cookie names (keeping the first occurrence)
 fn deduplicate_cookies(cookie_str: &str) -> String {
@@ -54,8 +54,8 @@ impl PjhoyClient {
         let cookie_path = data_dir.join("cookies.txt");
 
         if cookie_path.exists() {
-            let cookie_data = fs::read_to_string(&cookie_path)
-                .context("Failed to read cookies file")?;
+            let cookie_data =
+                fs::read_to_string(&cookie_path).context("Failed to read cookies file")?;
 
             if cookie_data.trim().is_empty() {
                 Ok(Jar::default())
@@ -86,8 +86,7 @@ impl PjhoyClient {
                 .context("Failed to save cookies")?;
         } else {
             // println!("Debug: No cookies to save");
-            fs::write(&cookie_path, "")
-                .context("Failed to save empty cookies file")?;
+            fs::write(&cookie_path, "").context("Failed to save empty cookies file")?;
         }
         Ok(())
     }
@@ -102,13 +101,15 @@ impl PjhoyClient {
             ("remember-me", &"false".to_string()),
         ];
 
-        let _session_response = self.client
+        let _session_response = self
+            .client
             .get(base_url)
             .send()
             .await
             .context("Failed to establish session")?;
 
-        let response = self.client
+        let response = self
+            .client
             .post(login_url)
             .form(&params)
             .send()
@@ -134,14 +135,18 @@ impl PjhoyClient {
         let customer_numbers = &self.config.customer_numbers;
         let url = construct_api_url(&self.config.username, customer_numbers)?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
             .context("Failed to fetch trash schedule")?;
 
         if !response.status().is_success() {
-            return Err(anyhow::anyhow!("Failed to fetch schedule: {}", response.status()));
+            return Err(anyhow::anyhow!(
+                "Failed to fetch schedule: {}",
+                response.status()
+            ));
         }
 
         let json_response: serde_json::Value = response
@@ -159,13 +164,19 @@ fn construct_api_url(username: &str, customer_numbers: &[String]) -> Result<Stri
     }
     let username_parts: Vec<&str> = username.split('-').collect();
     if username_parts.len() < 2 {
-        return Err(anyhow::anyhow!("Invalid username format. Expected format: xx-yyyyyyy-zz"));
+        return Err(anyhow::anyhow!(
+            "Invalid username format. Expected format: xx-yyyyyyy-zz"
+        ));
     }
 
     Ok(format!(
         "https://extranet.pjhoy.fi/pirkka/secure/get_services_by_customer_numbers.do?{}",
-        customer_numbers.iter()
-        .map(|cn| format!("customerNumbers%5B%5D={}-{}-{}",username_parts[0], username_parts[1], cn))
+        customer_numbers
+            .iter()
+            .map(|cn| format!(
+                "customerNumbers%5B%5D={}-{}-{}",
+                username_parts[0], username_parts[1], cn
+            ))
             .collect::<Vec<_>>()
             .join("&")
     ))
