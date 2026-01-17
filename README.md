@@ -49,12 +49,6 @@ A calendar file (.ics) is maintained with latest pickup dates. The calendar uses
 
 The original service names are moved to event descriptions for additional context.
 
-## Installation
-
-1. Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-2. Build the tool: `cargo build --release`
-3. Install: `cargo install --path .`
-
 ## Configuration
 
 Create a configuration file at `~/.config/pjhoy/config.toml`:
@@ -86,47 +80,3 @@ pjhoy fetch
 ```bash
 pjhoy calendar
 ```
-
-## Systemd Integration
-
-Create a systemd service file at `/etc/systemd/system/pjhoy.service`:
-
-```ini
-[Unit]
-Description=PJHOY Trash Schedule Updater
-
-[Service]
-Type=simple
-ExecStart=/home/youruser/.cargo/bin/pjhoy fetch
-User=youruser
-```
-
-Create a systemd timer file at `/etc/systemd/system/pjhoy.timer`:
-
-```ini
-[Unit]
-Description=Run PJHOY update daily
-
-[Timer]
-OnCalendar=daily
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-```
-
-Then enable and start the timer:
-
-```bash
-sudo systemctl enable pjhoy.timer
-sudo systemctl start pjhoy.timer
-```
-
-## Building
-
-```bash
-cargo build --release
-```
-
-The binary will be available at `target/release/pjhoy`
-=======
