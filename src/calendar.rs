@@ -2,7 +2,7 @@ use crate::models::TrashService;
 use anyhow::{Context, Result};
 use chrono::{NaiveDate, Utc};
 use ics::properties::{Description, DtStart, Summary};
-use ics::{Event, ICalendar};
+use ics::{escape_text, Event, ICalendar};
 
 /// Product groups mapping with Finnish names and icons
 const PRODUCT_GROUPS: &[(&str, &str, &str)] = &[
@@ -50,9 +50,9 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
     let product_group_title = get_product_group_title(service);
 
     if let Some(title) = product_group_title {
-        event.push(Summary::new(title));
+        event.push(Summary::new(escape_text(title)));
     } else {
-        event.push(Summary::new(format!("Jäte: {}", service.ASTNimi)));
+        event.push(Summary::new(escape_text(format!("Jäte: {}", service.ASTNimi))));
     }
 
     // Build description with cost information
@@ -62,7 +62,7 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
     }
     description.push_str(&service.ASTNimi);
 
-    event.push(Description::new(description));
+    event.push(Description::new(escape_text(description)));
 
     Ok(event)
 }
@@ -134,7 +134,7 @@ mod tests {
         );
         assert_eq!(
             properties.get("DESCRIPTION"),
-            Some(&vec!["Maksu: 10.50 €\n\nTest Trash Pickup".to_string()])
+            Some(&vec!["Maksu: 10.50 €\\n\\nTest Trash Pickup".to_string()])
         );
 
         if let Some(dtstamps) = properties.get("DTSTAMP") {
@@ -173,7 +173,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:🗑️ Sekajäte"));
-        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\n\nSekajäte säiliö"));
+        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\\n\\nSekajäte säiliö"));
 
         // Test with BIO product group
         let bio_service = TrashService {
@@ -193,7 +193,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:🍃 Biojäte"));
-        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\n\nBiojäte säiliö"));
+        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\\n\\nBiojäte säiliö"));
 
         // Test with unknown product group
         let unknown_service = TrashService {
@@ -213,7 +213,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:📦 UNKNOWN"));
-        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\n\nUnknown service"));
+        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\\n\\nUnknown service"));
 
         // Test with no tariff (fallback to old format)
         let no_tariff_service = TrashService {
@@ -230,7 +230,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:Jäte: No tariff service"));
-        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\n\nNo tariff service"));
+        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\\n\\nNo tariff service"));
 
         Ok(())
     }
