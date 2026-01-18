@@ -1,8 +1,8 @@
 use crate::models::TrashService;
 use anyhow::{Context, Result};
-use chrono::{NaiveDate, Utc};
-use ics::properties::{Description, DtStart, Summary};
-use ics::{escape_text, Event, ICalendar};
+use chrono::{Duration, NaiveDate, Utc};
+use ics::properties::{Description, DtEnd, DtStart, Summary};
+use ics::{escape_text, parameters, Event, ICalendar};
 
 /// Product groups mapping with Finnish names and icons
 const PRODUCT_GROUPS: &[(&str, &str, &str)] = &[
@@ -42,10 +42,14 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
         service.ASTAsnro, service_type_id, service.ASTPos, next_date
     );
 
-    let event_date_str = dstamp.format("%Y%m%d").to_string();
     let mut event = Event::new(uid, Utc::now().format("%Y%m%dT%H%M%SZ").to_string());
 
-    event.push(DtStart::new(event_date_str));
+    let mut dtstart = DtStart::new(dstamp.format("%Y%m%d").to_string());
+    let mut dtend = DtEnd::new((dstamp + Duration::days(1)).format("%Y%m%d").to_string());
+    dtstart.append(parameters!("VALUE" => "DATE"));
+    dtend.append(parameters!("VALUE" => "DATE"));
+    event.push(dtstart);
+    event.push(dtend);
 
     let product_group_title = get_product_group_title(service);
 
@@ -114,11 +118,12 @@ mod tests {
             }
 
             if let Some((name, value)) = line.split_once(':') {
+                let key = name.split_once(';').unwrap_or((name, "")).0.to_string();
                 properties
-                    .entry(name.to_string())
+                    .entry(key.clone())
                     .or_insert_with(Vec::new)
                     .push(value.to_string());
-                current_key = Some(name.to_string());
+                current_key = Some(key);
             } else {
                 current_key = None;
             }
@@ -165,7 +170,7 @@ mod tests {
         // Check description content
         let desc = properties.get("DESCRIPTION").unwrap().first().unwrap();
         assert!(desc.contains("Test Trash Pickup"));
-        assert!(desc.contains("Maksu: 13.18 € (sis. ALV)"));
+        assert!(desc.contains("Hinta: 13.18 € (sis. ALV)"));
         assert!(desc.contains("6 viikon välein"));
 
         if let Some(dtstamps) = properties.get("DTSTAMP") {
@@ -209,7 +214,7 @@ mod tests {
 
         let desc = properties.get("DESCRIPTION").unwrap().first().unwrap();
         assert!(desc.contains("Sekajäte säiliö"));
-        assert!(desc.contains("Maksu: 13.18 € (sis. ALV)"));
+        assert!(desc.contains("Hinta: 13.18 € (sis. ALV)"));
         assert!(desc.contains("6 viikon välein"));
 
         Ok(())
