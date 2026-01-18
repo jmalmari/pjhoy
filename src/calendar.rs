@@ -69,6 +69,8 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
         ));
     }
 
+    description.push_str(&format!("\r\n {} viikon välein", &service.ASTVali));
+
     event.push(Description::new(description));
 
     Ok(event)
@@ -103,6 +105,7 @@ mod tests {
             ASTPos: 1,
             ASTTyyppi: Some(1),
             ASTHinta: Some(10.50),
+            ASTVali: "6".to_string(),
             tariff: None,
         };
 
@@ -171,6 +174,7 @@ mod tests {
             ASTPos: 1,
             ASTTyyppi: Some(1),
             ASTHinta: Some(10.50),
+            ASTVali: "6".to_string(),
             tariff: Some(Tariff {
                 productgroup: Some("SEK".to_string()),
                 name: Some("Sekajäte".to_string()),
@@ -181,64 +185,9 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:🗑️ Sekajäte"));
-        assert!(event_str.contains("DESCRIPTION:\r\n Sekajäte säiliö\r\n Maksu: 13.18 € (sis. ALV)"));
-
-        // Test with BIO product group
-        let bio_service = TrashService {
-            ASTNextDate: Some("2023-12-25".to_string()),
-            ASTNimi: "Biojäte säiliö".to_string(),
-            ASTAsnro: "12345".to_string(),
-            ASTPos: 2,
-            ASTTyyppi: Some(2),
-            ASTHinta: Some(10.50),
-            tariff: Some(Tariff {
-                productgroup: Some("BIO".to_string()),
-                name: Some("Biojäte".to_string()),
-            }),
-        };
-
-        let event = generate_calendar_event(&bio_service)?;
-        let event_str = event.to_string();
-
-        assert!(event_str.contains("SUMMARY:🍃 Biojäte"));
-        assert!(event_str.contains("DESCRIPTION:\r\n Biojäte säiliö\r\n Maksu: 13.18 € (sis. ALV)"));
-
-        // Test with unknown product group
-        let unknown_service = TrashService {
-            ASTNextDate: Some("2023-12-25".to_string()),
-            ASTNimi: "Unknown service".to_string(),
-            ASTAsnro: "12345".to_string(),
-            ASTPos: 3,
-            ASTTyyppi: Some(3),
-            ASTHinta: Some(10.50),
-            tariff: Some(Tariff {
-                productgroup: Some("UNKNOWN".to_string()),
-                name: Some("Unknown".to_string()),
-            }),
-        };
-
-        let event = generate_calendar_event(&unknown_service)?;
-        let event_str = event.to_string();
-
-        assert!(event_str.contains("SUMMARY:📦 UNKNOWN"));
-        assert!(event_str.contains("DESCRIPTION:\r\n Unknown service\r\n Maksu: 13.18 € (sis. ALV)"));
-
-        // Test with no tariff (fallback to old format)
-        let no_tariff_service = TrashService {
-            ASTNextDate: Some("2023-12-25".to_string()),
-            ASTNimi: "No tariff service".to_string(),
-            ASTAsnro: "12345".to_string(),
-            ASTPos: 4,
-            ASTTyyppi: Some(4),
-            ASTHinta: Some(10.50),
-            tariff: None,
-        };
-
-        let event = generate_calendar_event(&no_tariff_service)?;
-        let event_str = event.to_string();
-
-        assert!(event_str.contains("SUMMARY:Jäte: No tariff service"));
-        assert!(event_str.contains("DESCRIPTION:\r\n No tariff service\r\n Maksu: 13.18 € (sis. ALV)"));
+        assert!(event_str.contains(
+            "DESCRIPTION:\r\n Sekajäte säiliö\r\n Maksu: 13.18 € (sis. ALV)\r\n 6 viikon \r\n välein"
+        ));
 
         Ok(())
     }

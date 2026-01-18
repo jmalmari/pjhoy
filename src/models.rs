@@ -11,6 +11,7 @@ pub struct TrashService {
     pub ASTTyyppi: Option<i32>,      // Service type ID
     pub tariff: Option<Tariff>,      // Tariff information including productgroup
     pub ASTHinta: Option<f64>,       // Cost, excluding taxes
+    pub ASTVali: String,             // Interval in weeks
 }
 
 #[derive(Debug, Serialize, Deserialize)]
