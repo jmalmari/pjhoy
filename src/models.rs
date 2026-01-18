@@ -10,7 +10,7 @@ pub struct TrashService {
     pub ASTPos: i32,                 // Position for uniqueness
     pub ASTTyyppi: Option<i32>,      // Service type ID
     pub tariff: Option<Tariff>,      // Tariff information including productgroup
-                                     // Other fields from the JSON response
+    pub ASTHinta: Option<f64>,       // Cost, excluding taxes
 }
 
 #[derive(Debug, Serialize, Deserialize)]
