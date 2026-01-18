@@ -52,7 +52,10 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
     if let Some(title) = product_group_title {
         event.push(Summary::new(escape_text(title)));
     } else {
-        event.push(Summary::new(escape_text(format!("Jäte: {}", &service.ASTNimi))));
+        event.push(Summary::new(escape_text(format!(
+            "Jäte: {}",
+            &service.ASTNimi
+        ))));
     }
 
     // Build description with optional cost information
@@ -60,7 +63,10 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
     description.push_str(&format!("\r\n {}", &escape_text(&service.ASTNimi)));
 
     if let Some(cost) = service.ASTHinta {
-        description.push_str(&format!("\r\n {}", &escape_text(&format!("Maksu: {:.2} €", cost))));
+        description.push_str(&format!(
+            "\r\n {}",
+            &escape_text(&format!("Maksu: {:.2} €", cost))
+        ));
     }
 
     event.push(Description::new(description));
@@ -110,7 +116,11 @@ mod tests {
         let mut properties = std::collections::HashMap::new();
         for line in event_str.lines() {
             let line = line.trim();
-            if line.starts_with("BEGIN:") || line.starts_with("END:") || line.is_empty() || line.starts_with(" ") {
+            if line.starts_with("BEGIN:")
+                || line.starts_with("END:")
+                || line.is_empty()
+                || line.starts_with(" ")
+            {
                 continue;
             }
             if let Some((name, value)) = line.split_once(':') {
@@ -133,10 +143,7 @@ mod tests {
             properties.get("SUMMARY"),
             Some(&vec!["Jäte: Test Trash Pickup".to_string()])
         );
-        assert_eq!(
-            properties.get("DESCRIPTION"),
-            Some(&vec!["".to_string()])
-        );
+        assert_eq!(properties.get("DESCRIPTION"), Some(&vec!["".to_string()]));
 
         if let Some(dtstamps) = properties.get("DTSTAMP") {
             assert!(
