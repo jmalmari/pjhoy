@@ -55,12 +55,13 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
         event.push(Summary::new(escape_text(format!("Jäte: {}", service.ASTNimi))));
     }
 
-    // Build description with cost information
+    // Build description with optional cost information
     let mut description = String::new();
-    if let Some(cost) = service.ASTHinta {
-        description.push_str(&format!("Maksu: {:.2} €\n\n", cost));
-    }
     description.push_str(&service.ASTNimi);
+
+    if let Some(cost) = service.ASTHinta {
+        description.push_str(&format!("\n Maksu: {:.2} €", cost));
+    }
 
     event.push(Description::new(escape_text(description)));
 
@@ -134,7 +135,7 @@ mod tests {
         );
         assert_eq!(
             properties.get("DESCRIPTION"),
-            Some(&vec!["Maksu: 10.50 €\\n\\nTest Trash Pickup".to_string()])
+            Some(&vec!["Test Trash Pickup\\n Maksu: 10.50 €".to_string()])
         );
 
         if let Some(dtstamps) = properties.get("DTSTAMP") {
@@ -173,7 +174,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:🗑️ Sekajäte"));
-        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\\n\\nSekajäte säiliö"));
+        assert!(event_str.contains("DESCRIPTION:Sekajäte säiliö\\n Maksu: 10.50 €"));
 
         // Test with BIO product group
         let bio_service = TrashService {
@@ -193,7 +194,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:🍃 Biojäte"));
-        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\\n\\nBiojäte säiliö"));
+        assert!(event_str.contains("DESCRIPTION:Biojäte säiliö\\n Maksu: 10.50 €"));
 
         // Test with unknown product group
         let unknown_service = TrashService {
@@ -213,7 +214,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:📦 UNKNOWN"));
-        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\\n\\nUnknown service"));
+        assert!(event_str.contains("DESCRIPTION:Unknown service\\n Maksu: 10.50 €"));
 
         // Test with no tariff (fallback to old format)
         let no_tariff_service = TrashService {
@@ -230,7 +231,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:Jäte: No tariff service"));
-        assert!(event_str.contains("DESCRIPTION:Maksu: 10.50 €\\n\\nNo tariff service"));
+        assert!(event_str.contains("DESCRIPTION:No tariff service\\n Maksu: 10.50 €"));
 
         Ok(())
     }
