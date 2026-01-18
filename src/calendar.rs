@@ -65,7 +65,7 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
     if let Some(cost) = service.ASTHinta {
         description.push_str(&format!(
             "\r\n {}",
-            &escape_text(&format!("Maksu: {:.2} €", cost))
+            &escape_text(&format!("Maksu: {:.2} € (sis. ALV)", 1.255 * cost))
         ));
     }
 
@@ -181,7 +181,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:🗑️ Sekajäte"));
-        assert!(event_str.contains("DESCRIPTION:\r\n Sekajäte säiliö\r\n Maksu: 10.50 €"));
+        assert!(event_str.contains("DESCRIPTION:\r\n Sekajäte säiliö\r\n Maksu: 13.18 € (sis. ALV)"));
 
         // Test with BIO product group
         let bio_service = TrashService {
@@ -201,7 +201,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:🍃 Biojäte"));
-        assert!(event_str.contains("DESCRIPTION:\r\n Biojäte säiliö\r\n Maksu: 10.50 €"));
+        assert!(event_str.contains("DESCRIPTION:\r\n Biojäte säiliö\r\n Maksu: 13.18 € (sis. ALV)"));
 
         // Test with unknown product group
         let unknown_service = TrashService {
@@ -221,7 +221,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:📦 UNKNOWN"));
-        assert!(event_str.contains("DESCRIPTION:\r\n Unknown service\r\n Maksu: 10.50 €"));
+        assert!(event_str.contains("DESCRIPTION:\r\n Unknown service\r\n Maksu: 13.18 € (sis. ALV)"));
 
         // Test with no tariff (fallback to old format)
         let no_tariff_service = TrashService {
@@ -238,7 +238,7 @@ mod tests {
         let event_str = event.to_string();
 
         assert!(event_str.contains("SUMMARY:Jäte: No tariff service"));
-        assert!(event_str.contains("DESCRIPTION:\r\n No tariff service\r\n Maksu: 10.50 €"));
+        assert!(event_str.contains("DESCRIPTION:\r\n No tariff service\r\n Maksu: 13.18 € (sis. ALV)"));
 
         Ok(())
     }
