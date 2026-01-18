@@ -63,7 +63,7 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
     description_lines.push(service.ASTNimi.clone());
 
     if let Some(cost) = service.ASTHinta {
-        description_lines.push(format!("Maksu: {:.2} € (sis. ALV)", 1.255 * cost));
+        description_lines.push(format!("Hinta: {:.2} € (sis. ALV)", 1.255 * cost));
     }
 
     description_lines.push(format!("{} viikon välein", service.ASTVali));
