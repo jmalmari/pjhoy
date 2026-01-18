@@ -59,19 +59,16 @@ fn generate_calendar_event(service: &TrashService) -> Result<Event<'_>> {
     }
 
     // Build description with optional cost information
-    let mut description = String::new();
-    description.push_str(&format!("\r\n {}", &escape_text(&service.ASTNimi)));
+    let mut description_lines = Vec::new();
+    description_lines.push(service.ASTNimi.clone());
 
     if let Some(cost) = service.ASTHinta {
-        description.push_str(&format!(
-            "\r\n {}",
-            &escape_text(&format!("Maksu: {:.2} € (sis. ALV)", 1.255 * cost))
-        ));
+        description_lines.push(format!("Maksu: {:.2} € (sis. ALV)", 1.255 * cost));
     }
 
-    description.push_str(&format!("\r\n {} viikon välein", &service.ASTVali));
+    description_lines.push(format!("{} viikon välein", service.ASTVali));
 
-    event.push(Description::new(description));
+    event.push(Description::new(escape_text(description_lines.join("\n"))));
 
     Ok(event)
 }
@@ -95,6 +92,40 @@ mod tests {
     use super::*;
     use crate::models::{Tariff, TrashService};
 
+    fn parse_ics_properties(event_str: &str) -> std::collections::HashMap<String, Vec<String>> {
+        let mut properties: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+        let mut current_key: Option<String> = None;
+
+        for line in event_str.lines() {
+            if line.is_empty() {
+                continue;
+            }
+
+            if line.starts_with(' ') || line.starts_with('\t') {
+                // Continuation line
+                if let Some(key) = &current_key {
+                    if let Some(values) = properties.get_mut(key) {
+                        if let Some(last_value) = values.last_mut() {
+                            last_value.push_str(&line[1..]);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            if let Some((name, value)) = line.split_once(':') {
+                properties
+                    .entry(name.to_string())
+                    .or_insert_with(Vec::new)
+                    .push(value.to_string());
+                current_key = Some(name.to_string());
+            } else {
+                current_key = None;
+            }
+        }
+        properties
+    }
+
     #[test]
     fn test_event_creation_with_timestamp() -> Result<()> {
         // Create a sample trash service
@@ -116,23 +147,7 @@ mod tests {
         let event_str = event.to_string();
 
         // Parse to check properties
-        let mut properties = std::collections::HashMap::new();
-        for line in event_str.lines() {
-            let line = line.trim();
-            if line.starts_with("BEGIN:")
-                || line.starts_with("END:")
-                || line.is_empty()
-                || line.starts_with(" ")
-            {
-                continue;
-            }
-            if let Some((name, value)) = line.split_once(':') {
-                properties
-                    .entry(name.to_string())
-                    .or_insert_with(Vec::new)
-                    .push(value.to_string());
-            }
-        }
+        let properties = parse_ics_properties(&event_str);
 
         assert_eq!(
             properties.get("UID"),
@@ -146,7 +161,12 @@ mod tests {
             properties.get("SUMMARY"),
             Some(&vec!["Jäte: Test Trash Pickup".to_string()])
         );
-        assert_eq!(properties.get("DESCRIPTION"), Some(&vec!["".to_string()]));
+
+        // Check description content
+        let desc = properties.get("DESCRIPTION").unwrap().first().unwrap();
+        assert!(desc.contains("Test Trash Pickup"));
+        assert!(desc.contains("Maksu: 13.18 € (sis. ALV)"));
+        assert!(desc.contains("6 viikon välein"));
 
         if let Some(dtstamps) = properties.get("DTSTAMP") {
             assert!(
@@ -183,11 +203,14 @@ mod tests {
 
         let event = generate_calendar_event(&sek_service)?;
         let event_str = event.to_string();
+        let properties = parse_ics_properties(&event_str);
 
         assert!(event_str.contains("SUMMARY:🗑️ Sekajäte"));
-        assert!(event_str.contains(
-            "DESCRIPTION:\r\n Sekajäte säiliö\r\n Maksu: 13.18 € (sis. ALV)\r\n 6 viikon \r\n välein"
-        ));
+
+        let desc = properties.get("DESCRIPTION").unwrap().first().unwrap();
+        assert!(desc.contains("Sekajäte säiliö"));
+        assert!(desc.contains("Maksu: 13.18 € (sis. ALV)"));
+        assert!(desc.contains("6 viikon välein"));
 
         Ok(())
     }
