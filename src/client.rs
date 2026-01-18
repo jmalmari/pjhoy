@@ -27,6 +27,17 @@ fn deduplicate_cookies(cookie_str: &str) -> String {
 }
 
 #[derive(Debug)]
+pub struct SessionExpired;
+
+impl std::fmt::Display for SessionExpired {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Session expired")
+    }
+}
+
+impl std::error::Error for SessionExpired {}
+
+#[derive(Debug)]
 pub struct PjhoyClient {
     pub config: Credentials,
     pub client: Client,
@@ -149,6 +160,16 @@ impl PjhoyClient {
             ));
         }
 
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("");
+
+        if !content_type.contains("application/json") {
+            return Err(anyhow::Error::new(SessionExpired));
+        }
+
         let json_response: serde_json::Value = response
             .json()
             .await
@@ -216,5 +237,12 @@ mod tests {
         let cookie_str = "JSESSIONID=test123; JSESSIONIDVERSION=test456; JSESSIONIDVERSION=test789";
         let deduped = deduplicate_cookies(cookie_str);
         assert_eq!(deduped, "JSESSIONID=test123; JSESSIONIDVERSION=test456");
+    }
+
+    #[test]
+    fn test_session_expired_error() {
+        let err = anyhow::Error::new(SessionExpired);
+        assert!(err.downcast_ref::<SessionExpired>().is_some());
+        assert_eq!(err.to_string(), "Session expired");
     }
 }

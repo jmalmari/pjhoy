@@ -3,7 +3,7 @@ mod client;
 mod config;
 mod models;
 
-use crate::client::PjhoyClient;
+use crate::client::{PjhoyClient, SessionExpired};
 use crate::config::load_config;
 use crate::models::TrashService;
 use anyhow::{Context, Result};
@@ -122,7 +122,26 @@ async fn main() -> Result<()> {
             save_parsed,
             save_original,
         } => {
-            let services_json = client.fetch_trash_services().await?;
+            let services_json = match client.fetch_trash_services().await {
+                Ok(json) => json,
+                Err(e) => {
+                    if e.downcast_ref::<SessionExpired>().is_some() {
+                        println!("Session expired, attempting to login...");
+                        client
+                            .login()
+                            .await
+                            .context("Failed to login during retry")?;
+                        println!("Login successful, retrying fetch...");
+                        client
+                            .fetch_trash_services()
+                            .await
+                            .context("Failed to fetch services after login")?
+                    } else {
+                        return Err(e);
+                    }
+                }
+            };
+
             let services: Vec<TrashService> = serde_json::from_value(services_json.clone())?;
 
             println!("Fetched {} trash services", services.len());
