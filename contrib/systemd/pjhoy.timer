@@ -1,0 +1,9 @@
+[Unit]
+Description=PJHOY sync timer
+
+[Timer]
+OnCalendar=Mon..Fri 03:00:00
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Publish local pjhoy.ics
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecSearchPath=/path/to/pjhoy/bin:/usr/bin
+ExecStart=pjhoy login
+ExecStart=pjhoy fetch
+ExecStart=curl -T /root/.local/share/pjhoy/pjhoy.ics -u user:password --silent https://webdav.myserver/dist/
