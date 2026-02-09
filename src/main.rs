@@ -112,7 +112,7 @@ async fn main() -> Result<()> {
     std::fs::create_dir_all(&data_dir).context("Could not create data directory")?;
 
     let config = load_config(&config_dir)?;
-    let mut client = PjhoyClient::new(config, data_dir.clone())?;
+    let mut client = PjhoyClient::new(config.clone(), data_dir.clone())?;
 
     // Determine output path for ICS file
     let output_path = cli.output.unwrap_or_else(|| data_dir.join("pjhoy.ics"));
@@ -150,7 +150,13 @@ async fn main() -> Result<()> {
 
             println!("Fetched {} trash services", services.len());
 
-            let calendar = calendar::generate_calendar(&services, cli.ics_interval.as_deref())?;
+            let ics_interval = cli
+                .ics_interval
+                .as_deref()
+                .or(config.ics_interval.as_deref())
+                .unwrap_or("P1D");
+
+            let calendar = calendar::generate_calendar(&services, Some(ics_interval))?;
 
             // Save calendar file
             let calendar_content = calendar.to_string();
@@ -173,7 +179,13 @@ async fn main() -> Result<()> {
             let services = load_trash_services(&data_dir)?;
 
             // Generate calendar from the loaded services
-            let calendar = calendar::generate_calendar(&services, cli.ics_interval.as_deref())?;
+            let ics_interval = cli
+                .ics_interval
+                .as_deref()
+                .or(config.ics_interval.as_deref())
+                .unwrap_or("P1D");
+
+            let calendar = calendar::generate_calendar(&services, Some(ics_interval))?;
 
             // Save calendar
             let calendar_content = calendar.to_string();

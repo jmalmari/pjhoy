@@ -9,6 +9,7 @@ pub struct Credentials {
     pub username: String,
     pub password: String,
     pub customer_numbers: Vec<String>,
+    pub ics_interval: Option<String>,
 }
 
 pub fn load_config(config_dir: &PathBuf) -> Result<Credentials> {
