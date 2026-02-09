@@ -2,6 +2,7 @@ use crate::models::TrashService;
 use anyhow::{Context, Result};
 use chrono::{Duration, NaiveDate, Utc};
 use ics::properties::{Description, DtEnd, DtStart, Summary};
+use ics::components::Property;
 use ics::{escape_text, parameters, Event, ICalendar};
 
 /// Product groups mapping with Finnish names and icons
@@ -16,8 +17,15 @@ const PRODUCT_GROUPS: &[(&str, &str, &str)] = &[
     ("VU", "Vaarallinen jäte", "☣️"),
 ];
 
-pub fn generate_calendar(services: &[TrashService]) -> Result<ICalendar<'_>> {
+pub fn generate_calendar<'a>(services: &'a [TrashService], refresh_interval: Option<&'a str>) -> Result<ICalendar<'a>> {
     let mut calendar = ICalendar::new("2.0", "-//pjhoy//trash calendar//EN");
+
+    if let Some(interval) = refresh_interval {
+        let mut refresh_prop = Property::new("REFRESH-INTERVAL", interval);
+        refresh_prop.append(parameters!("VALUE" => "DURATION"));
+        calendar.push(refresh_prop);
+        calendar.push(Property::new("X-PUBLISHED-TTL", interval));
+    }
 
     for service in services {
         if let Ok(event) = generate_calendar_event(service) {

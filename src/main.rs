@@ -21,6 +21,10 @@ struct Cli {
     #[arg(long, short)]
     output: Option<PathBuf>,
 
+    /// ICS refresh interval (e.g., P1D)
+    #[arg(long)]
+    ics_interval: Option<String>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -146,7 +150,7 @@ async fn main() -> Result<()> {
 
             println!("Fetched {} trash services", services.len());
 
-            let calendar = calendar::generate_calendar(&services)?;
+            let calendar = calendar::generate_calendar(&services, cli.ics_interval.as_deref())?;
 
             // Save calendar file
             let calendar_content = calendar.to_string();
@@ -169,7 +173,7 @@ async fn main() -> Result<()> {
             let services = load_trash_services(&data_dir)?;
 
             // Generate calendar from the loaded services
-            let calendar = calendar::generate_calendar(&services)?;
+            let calendar = calendar::generate_calendar(&services, cli.ics_interval.as_deref())?;
 
             // Save calendar
             let calendar_content = calendar.to_string();
